@@ -31,24 +31,28 @@ async function processImage(inputBuffer, preset, customOptions = {}) {
 
   if (config.maxKB) {
     const targetBytes = config.maxKB * 1024;
-    pipeline = pipeline.jpeg({ quality: 80 });
-    let outputBuffer = await pipeline.toBuffer();
 
-    if (outputBuffer.length > targetBytes) {
-      let quality = 70;
-      while (outputBuffer.length > targetBytes && quality >= 20) {
-        outputBuffer = await sharp(inputBuffer)
-          .resize(config.width || null, config.height || null, {
-            fit: "cover",
-            position: "center",
-          })
-          .jpeg({ quality })
-          .toBuffer();
-        quality -= 10;
+    const encode = (q) =>
+      sharp(inputBuffer)
+        .resize(config.width || null, config.height || null, { fit: "cover", position: "center" })
+        .jpeg({ quality: q })
+        .toBuffer();
+
+    // Binary search: find highest quality whose output is <= targetBytes
+    let lo = 1, hi = 95, best = null;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const buf = await encode(mid);
+      if (buf.length <= targetBytes) {
+        best = buf;
+        lo = mid + 1; // try higher quality (larger, closer to target)
+      } else {
+        hi = mid - 1;
       }
-      return outputBuffer;
     }
-    return outputBuffer;
+
+    // best is the largest file still within the limit; fall back to q=1 if nothing fits
+    return best ?? await encode(1);
   }
 
   return await pipeline.toBuffer();
