@@ -9,7 +9,7 @@ const allowedOrigins = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL]
   : ["http://localhost:3000", "https://docready-web.vercel.app"];
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins })); 
 app.use(express.json());
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
